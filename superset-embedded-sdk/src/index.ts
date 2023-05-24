@@ -91,14 +91,14 @@ export async function embedDashboard({
 
   function calculateConfig() {
     let configNumber = 0
-    if(dashboardUiConfig) {
-      if(dashboardUiConfig.hideTitle) {
+    if (dashboardUiConfig) {
+      if (dashboardUiConfig.hideTitle) {
         configNumber += 1
       }
-      if(dashboardUiConfig.hideTab) {
+      if (dashboardUiConfig.hideTab) {
         configNumber += 2
       }
-      if(dashboardUiConfig.hideChartControls) {
+      if (dashboardUiConfig.hideChartControls) {
         configNumber += 8
       }
     }
@@ -129,24 +129,27 @@ export async function embedDashboard({
 
       // add the event listener before setting src, to be 100% sure that we capture the load event
       iframe.addEventListener('load', () => {
-        // MessageChannel allows us to send and receive messages smoothly between our window and the iframe
-        // See https://developer.mozilla.org/en-US/docs/Web/API/Channel_Messaging_API
-        const commsChannel = new MessageChannel();
-        const ourPort = commsChannel.port1;
-        const theirPort = commsChannel.port2;
+        // lets give the embedded page some time to load and then start communicating
+        setTimeout(() => {
+          // MessageChannel allows us to send and receive messages smoothly between our window and the iframe
+          // See https://developer.mozilla.org/en-US/docs/Web/API/Channel_Messaging_API
+          const commsChannel = new MessageChannel();
+          const ourPort = commsChannel.port1;
+          const theirPort = commsChannel.port2;
 
-        // Send one of the message channel ports to the iframe to initialize embedded comms
-        // See https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage
-        // we know the content window isn't null because we are in the load event handler.
-        iframe.contentWindow!.postMessage(
-          { type: IFRAME_COMMS_MESSAGE_TYPE, handshake: "port transfer" },
-          supersetDomain,
-          [theirPort],
-        )
-        log('sent message channel to the iframe');
+          // Send one of the message channel ports to the iframe to initialize embedded comms
+          // See https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage
+          // we know the content window isn't null because we are in the load event handler.
+          iframe.contentWindow!.postMessage(
+            { type: IFRAME_COMMS_MESSAGE_TYPE, handshake: "port transfer" },
+            supersetDomain,
+            [theirPort],
+          )
+          log('sent message channel to the iframe');
 
-        // return our port from the promise
-        resolve(new Switchboard({ port: ourPort, name: 'superset-embedded-sdk', debug }));
+          // return our port from the promise
+          resolve(new Switchboard({ port: ourPort, name: 'superset-embedded-sdk', debug }));
+        }, 2500);
       });
 
       iframe.src = `${supersetDomain}/embedded/${id}${dashboardConfig}${filterConfigUrlParams}`;
